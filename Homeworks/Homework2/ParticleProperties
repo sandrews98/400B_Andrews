@@ -83,7 +83,7 @@ def ParticleInfo(filename, particle_type, particle_number):
 
 #testing to see if code works
 def Test_Particle_Info():
-    filename = '/Users/samantha/Documents/400b/400B_Andrews/Homworks/MW_000.txt'
+    filename = '/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework2/MW_000.txt'
 
     #Test a few within range
     mag_distance, mag_velocity, m = ParticleInfo(filename,2,1)
@@ -122,7 +122,7 @@ mag_velocity = 0
 m = 0
 distance_ly = 0
 
-filename = '/Users/samantha/Documents/400b/400B_Andrews/Homworks/MW_000.txt'
+filename = '/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework2/MW_000.txt'
 mag_distance, mag_velocity, m = ParticleInfo(filename, 2, 100)
 print(f"Distance = {mag_distance}\n Velocity = {mag_velocity}\n Mass = {m}")
 
