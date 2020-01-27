@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jan 26 13:18:02 2020
+
+@author: samantha
+"""
+
+import numpy as np
+import astropy.units as u
+from ReadFile import Read
+import math
+
+"""
+this code takes inputs such as filename, particle type, and number
+and returns for any particle
+1) magnitude of the distance in kpc
+2) magniude of velocity in km/s
+3) mass in units of solar masses
+
+"""
+
+#define a routine to calc the magnitude of the distance in kpc
+def calc_mag_distance(x, y, z):
+    return math.sqrt(x**2 + y**2 + z**2)
+
+#define a routine to calc the mag of the velocity
+def calc_mag_velocity(vx, vy, vz):
+    return math.sqrt(vx**2 + vy**2 + vz**2)
+
+
+def ParticleInfo(filename, particle_type, particle_number):
+     #initialize values
+    x = 0
+    y = 0
+    z = 0
+    vx = 0
+    vy = 0
+    vz = 0
+    mag_distance = 0
+    mag_velocity = 0
+    m = 0
+    index = 0
+    time, number_particles, data = Read(filename)
+    
+    """
+    user will most likely enter 1 if they want the first value, but the
+    computer starts at 0 instead of 1 so we subtract 1 in order to ensure
+    the user gets what they want
+    """
+    particle_index = particle_number - 1
+    
+    #find first particle of type given
+    #index tells where a certain type beings
+    index = np.where(data['type'] == particle_type)
+    
+    #check to make sure there is a particle of type entered
+    if len(data['x'][index]) == 0:
+        print(f"No particles of {particle_type} exist")
+        
+    #if no particle entered exists
+    elif particle_index >= len(data['x'][index]) or particle_index < 0:
+        print(f"No particle number {particle_number} exists")
+    else:
+        #get data for specific particle wanted
+        #start with mass
+        m = np.around((data['m'][index])[particle_index] * 10**10, 3) * u.Msun
+        
+        #repeat for x, y, z, vx,vy, vz
+        x = (data['x'][index])[particle_index]
+        y = (data['y'][index])[particle_index]
+        z = (data['z'][index])[particle_index]
+        vx = (data['vx'][index])[particle_index]
+        vy = (data['vy'][index])[particle_index]
+        vz = (data['vz'][index])[particle_index]
+        
+        #compute mag of distance and velocity round to 3 units
+        mag_distance = np.around(calc_mag_distance(x, y, z), 3) * u.kpc
+        mag_velocity = np.around(calc_mag_velocity(vx, vy, vz), 3) * u.km/u.s
+        
+    return mag_distance, mag_velocity, m
+
+
+#testing to see if code works
+def Test_Particle_Info():
+    filename = '/Users/samantha/Documents/400b/400B_Andrews/Homworks/MW_000.txt'
+
+    #Test a few within range
+    mag_distance, mag_velocity, m = ParticleInfo(filename,2,1)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the 1st particle of type 2 in the file")
+    mag_distance, mag_velocity, m = ParticleInfo(filename,1,5)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the 5th particle of type 1 in the file")   
+    mag_distance, mag_velocity, m = ParticleInfo(filename,3,10)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the 10th particle of type 3 in the file")
+
+    #Test particles outside of range
+    mag_distance, mag_velocity, m = ParticleInfo(filename,1,1000000)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the 1,000,000 particle of type 1 in the file")
+    mag_distance, mag_velocity, m = ParticleInfo(filename,3,-1)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the -1 of type 3 in the file")
+
+    #Test type nonexistant
+    mag_distance, mag_velocity, m = ParticleInfo(filename,4,1)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the first particle of type 4 in the file")
+    mag_distance, mag_velocity, m = ParticleInfo(filename,-1,1)
+    print(f"mag_distance = {mag_distance}, mag_vel={mag_velocity}, mass={m} for the first particle of type -1 in the file")
+    #Invalid arguements ends in an error
+#    mag_dist,mag_vel,mass=ParticleInfo(filename,4,a)
+    
+Test_Particle_Info()
+    
+"""
+PROVE CODE WORKS:
+    determine properties of 100th disk particle of the MW at SnapNumber 0
+    3D Distance
+    3D Velocity 
+    mass
+    convert 3D distance of particles to lightyears
+"""
+mag_distance = 0
+mag_velocity = 0
+m = 0
+distance_ly = 0
+
+filename = '/Users/samantha/Documents/400b/400B_Andrews/Homworks/MW_000.txt'
+mag_distance, mag_velocity, m = ParticleInfo(filename, 2, 100)
+print(f"Distance = {mag_distance}\n Velocity = {mag_velocity}\n Mass = {m}")
+
+#convert distance to ly
+distance_ly = np.around(mag_distance.to(u.lyr), 3)
+print(f"Distance converted from kpc to ly = {distance_ly}")
+    
+    
+    
+    
