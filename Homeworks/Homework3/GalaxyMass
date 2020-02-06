@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb  3 17:17:25 2020
+
+@author: samantha
+"""
+"""
+ASTR 400B HW3
+"""
+
+import numpy as np
+from ReadFile import Read
+import astropy.units as u
+from astropy.table import QTable, Table, Column
+
+"""
+define a function to return the total mass of any desired galaxy componenet.
+inputs:
+    filename
+    particle type
+mass will be returned in units of 10^12 solar masses
+return mass to 3 decimal places
+"""
+def ComponentMass(filename, particle_type):
+    #read in datafile
+    time, particles, data = Read(filename)
+    #initialize variables
+    index = 0
+    m = 0 #mass in solar masses
+    total_mass = 0
+    particle_index = 0
+    #find the first particle of a given type
+    #find the index of where data type begins
+    #go to the particle number of that type
+    index = np.where(data['type']==particle_type)
+    #check particles type exists
+    if len(data['x'][index]) == 0:
+        print(f"No particle type {particle_type} exist.")
+        
+    #if particle type found, add up all the masses and return the total
+    else:
+        while particle_index < len(data['x'][index]):
+            #get all values for mass and add to the total mass
+            total_mass += data['m'][index][particle_index]
+            particle_index += 1
+        total_mass = total_mass / 100 #total mass in units of 10e12 * Msun
+    return np.around(total_mass, 3) #returns mass to 3 decimal places
+
+
+"""
+create table:
+    columns will be: Galaxy Name, Halo Mass (units), Disk Mass (units), Bulge
+    Mass (units), Total (units), f_bar
+    rows will be: MW, M31 and M33
+Note: M33 does not have a bulge
+"""
+#store each mass type in an array
+HaloMass = []
+DiskMass = []
+BulgeMass = []
+Total = []
+#fbar is the total stellar mass / total mass (stellar + dark)
+#disk + buldge / disk + bulge + dark matter
+fbar = []
+t = QTable() #QTable allows for units to be displayed under column heading
+
+#define column values
+t['Galaxy Names']=['MW', 'M31', 'M33', 'Local Group']
+
+#import data file
+filename = "MW_000.txt"
+
+#compute mass for first file and append values into the array
+HaloMass.append(ComponentMass(filename, 1))
+#print(f"HaloMass[0] = {HaloMass}")
+
+DiskMass.append(ComponentMass(filename,2))
+#print(f"DiskMass[0]={DiskMass[0]}")
+
+BulgeMass.append(ComponentMass(filename,3))
+#print(f"BulgeMass[0]={BulgeMass[0]}")
+
+Total.append(HaloMass[0]+DiskMass[0]+BulgeMass[0]) #Compute Total Mass for MW
+#print(f"Total[0]={Total[0]}")
+
+#Compute the Masses for the second file and put the values into arrays
+#print statements just to check and keep track
+
+filename = "M31_000.txt"
+#print(f"Processing {filename}")
+
+HaloMass.append(ComponentMass(filename,1))
+#print(f"HaloMass[1]={HaloMass[1]}")
+
+DiskMass.append(ComponentMass(filename,2))
+#print(f"Disk_Masses[1]={Disk_Masses[1]}")
+
+BulgeMass.append(ComponentMass(filename,3))
+#print(f"BulgeMass[1]={BulgeMass[1]}")
+
+Total.append(HaloMass[1]+DiskMass[1]+BulgeMass[1]) # Compute Total Mass for M31
+#print(f"Totals[1]={Totals[1]}")
+
+#Compute the Masses for the third file and put the values into arrays
+
+filename = "M33_000.txt"
+#print(f"Processing {filename}")
+
+HaloMass.append(ComponentMass(filename,1))
+#print(f"HaloMass[2]={HaloMass[2]}")
+
+DiskMass.append(ComponentMass(filename,2))
+#print(f"DiskMass[2]={DiskMass[2]}")
+
+BulgeMass.append(0)  # There are no Bulge Masses in this file 
+#print(f"BulgeMass[2]={BulgeMass[2]}")
+
+Total.append(HaloMass[2]+DiskMass[2])  # Compute Total Mass for M33
+#print(f"Total[2]={Total[2]}")
+
+
+# Compute the total mass of each particle type
+#round to 3rd decimal
+
+HaloMass.append(np.around(np.sum(HaloMass), 3))
+DiskMass.append(np.around(np.sum(DiskMass), 3))
+BulgeMass.append(np.around(np.sum(BulgeMass), 3))
+
+Total.append(np.sum(Total))  # Compute Total Mass for Local Group
+#print(f"Total[3]={Total[3]}")
+
+
+
+
+
+#Compute the baryon fraction fbar = total stellar mass / total mass (dark+stellar) 
+#for each galaxy and the whole local group
+fbar.append(np.around((DiskMass[0] + BulgeMass[0])/Total[0], 3))
+fbar.append(np.around((DiskMass[1] + BulgeMass[1])/Total[1], 3))
+fbar.append(np.around((DiskMass[2] + BulgeMass[2])/Total[2], 3))
+fbar.append(np.around((DiskMass[3] + BulgeMass[3])/Total[3], 3))
+
+
+
+
+
+
+
+#Put it all into the Table
+
+
+t['Halo Mass']=HaloMass*u.Msun
+t['Disk Mass']=DiskMass*u.Msun
+t['Bulge Mass']=BulgeMass*u.Msun
+t['Total']=Total*u.Msun
+t['f_bar']=fbar
+
+#[Column1,HaloMass,DiskMass,BulgeMass,Total])
+# names=('Galaxy Name','Halo Masses (10^12)','Disk Masses (10^12)','Bulge_Masses (10^12)','Totals (10^12)'))
+print(t)
+

@@ -21,7 +21,7 @@ def Read(filename):
     #read in first line and store w/ units of 10Myr
     line1 = file.readline()
     label, value = line1.split()
-    time = float(value)*10.0*u.Myr
+    time = float(value)*u.Myr
     
     #now read in second line for total number of particles
     line2 = file.readline()
