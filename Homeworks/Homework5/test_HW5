@@ -1,0 +1,731 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb 21 21:46:44 2020
+
+@author: samantha
+"""
+
+import numpy as np
+import astropy.units as u
+from ReadFile import Read
+import math
+from CenterOfMass import CenterOfMass
+import matplotlib.pyplot as plt
+import matplotlib
+from astropy.constants import G
+import matplotlib.gridspec as gridspec
+
+class MassProfile:
+    def __init__(self, Galaxy, Snap):
+        #Inputs:
+        #   galaxy: a string with galaxy name
+        #   snap: snapshot number
+        #add a string of the filenumber to the value 000
+        #construct filename
+#        print("Initializing galazy = ", Galaxy," Snap = ", Snap)
+        directory="/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework5/" 
+        ilbl = '000' + str(Snap)
+        #remove all but last three digits
+        ilbl = ilbl[-3:]
+        self.filename = directory+"%s_"%(Galaxy) + ilbl + '.txt'
+        #if you want file MW_010.txt input MW and 10
+        
+        #read in data for the x,y,z positions and mass
+        #store with units of kpc and msun
+        
+        #read is using ReadFile
+        self.time, self.total, self.data = Read(self.filename)
+        
+        #store
+        #don't assign mass units yet
+        self.m = self.data['m']*1e10 #****************IS THIS THE CORRECT THING TO DO????
+        self.x = self.data['x']*u.kpc
+        self.y = self.data['y']*u.kpc
+        self.z = self.data['z']*u.kpc
+        
+        #store name of galaxy as global property self.gname
+        self.gname = Galaxy
+        
+        self.Gconv=G.to(u.kpc*u.km**2/u.s**2/u.Msun)
+        
+        #Function to somput the mass enclosed w/in a given radius of the COM 
+        #   position for a specific galaxy w/ specific components
+        #will calculate total enclosed mass for an array of radii
+        #returns and array of masses [Msun]
+        #use to calculate mass profile 
+    def MassEnclosed(self, ptype, radii):
+#        print("Mass enclosed for particle typ ",ptype)
+        #First determine the COM position by creating a CenterOfMass object and calling COM_P
+        Galaxy_COM = CenterOfMass(self.filename, ptype)
+        Galaxy_COMP = Galaxy_COM.COM_P(0.1)
+#        print("Galaxy_COMP", Galaxy_COMP)
+        
+        #initialize array to store the total mass w/in each radius
+        mass = np.zeros(len(radii))
+        index = np.where(self.data['type']==ptype)
+        mass_ptype = self.m[index]
+        #create an array of distances to COM
+        xdist = self.x[index] - Galaxy_COMP[0]
+        ydist = self.y[index] - Galaxy_COMP[1]
+        zdist = self.z[index] - Galaxy_COMP[2]
+        distances = np.sqrt(xdist**2 + ydist**2 + zdist**2)
+        #loop over the radius array and define particles that are enclosed w/in the radius given at each array element
+        #in loop:
+        #   store the sum of masses of particles w/in radius
+#        print("radii[0]=",radii[0])
+        for i in range(len(radii)):
+            withinradiusindex = np.where(distances.value <= radii[i].value)
+            mass[i] = np.sum(mass_ptype[withinradiusindex])
+           
+        return mass*u.Msun
+
+    def MassEnclosedTotal(self, radii):
+        #this function will compute the mass enclosed w/in the radius array for each particle type
+        #Inputs:
+        #   radii 1D array [kpc]
+        #Returns:
+        #   an array of masses [Msun]
+        #   these represent the total enclosed mass at each radius
+        
+        #need mass for bulge, disk and halo
+        #set up an array for each
+        bulgemass = []
+        diskmass = []
+        halomass = []
+        totalmass = []
+        
+        halomass = self.MassEnclosed(1, radii)
+        
+        diskmass = self.MassEnclosed(2, radii)
+        
+        #M33 does not have a bulge, so check 
+        if not self.gname == "M33":
+            bulgemass = self.MassEnclosed(3, radii)
+        #combine to get total mass
+        i = 0
+        for i in range(len(radii)):
+            if self.gname =="M33":
+                totalmass.append(halomass[i] + diskmass[i])
+            else:
+                totalmass.append(bulgemass[i] + diskmass[i] + halomass[i])
+            i += 1
+#        print("totalmass = ",totalmass*u.Msun)    
+        return totalmass*u.Msun
+    
+    #function to compute the mass enclosed w/in a radius using Hernquist Profile
+    def HernquistMass(self, radius, a, Mhalo):
+        #Input:
+        #   radius [kpc]
+        #   a is the scale factor
+        #   Mhalo is the mass in the halo [Msun]
+        #Output:
+        #   the Hernquist mass = total mass enclosed a given radius
+        #initialize
+
+        M = (Mhalo * radius**2)/((a + radius)**2)
+#        rho = M*a.value/((2*np.pi*radius*(radius + a.value)**3))
+        return M*u.Msun
+        
+    
+    def CircularVelocity(self, ptype, radii):
+        #Inputs:
+        #   particle type
+        #   radius [kpc]
+        #Returns:
+        #   an array of circular speeds [km/s] round to 2 decimal places 
+        #compute circular speed using the mass enclosed at each radius
+        #assume spherical symmetry
+        # v = sqrt(GM/r)
+#        print("Circular velocity for particle type =", ptype, "for radii")
+        v = []
+
+        #get mass enclosed
+        M = self.MassEnclosed(ptype, radii)
+#        print("v = ",np.sqrt(self.Gconv*np.divide(M[0],radii[0])))
+        v=np.sqrt(self.Gconv*np.divide(M,radii))
+#       print("v= ",v)
+        return np.around(v, 2) #It is km/s given the units input
+        
+    def CircularVelocityTotal(self, radii):
+        #Input:
+        #   array of radii
+        #Return:
+        #   array of circular velocity [km/s]
+        #represents total Vcirc created by all galaxy components at each radius of the input array
+        vcirc1 = []
+        vcirc2 = []
+        vcirc3 = []
+        totalvcirc = []
+        
+        vcirc1 = self.CircularVelocity(1, radii)
+        vcirc2 = self.CircularVelocity(2, radii)
+        
+        #M33 does not have a bulge, so check 
+        if not self.gname == "M33":
+            vcirc3 = self.CircularVelocity(3, radii)
+        #combine to get total circular velocity
+        i = 0
+        for i in range(len(radii)):
+            if self.gname =="M33":
+                totalvcirc.append(vcirc1[i] + vcirc2[i])
+            else:
+                totalvcirc.append(vcirc1[i] + vcirc2[i] + vcirc3[i])
+            i += 1
+#        print("totalvcirc = ",totalvcirc)
+        return totalvcirc*(u.km/u.s)
+    
+    def HernquistVCirc(self, radius, a, Mhalo):
+        #Inputs:
+        #   radius [kpc]
+        #   a is the scale factor
+        #   Mhalo is the mass in the halo
+        #Returns:
+        #   the circular speed [km/s]
+        v = []
+
+        v = np.sqrt(self.Gconv*self.HernquistMass(radius,a,Mhalo)/radius)
+
+        return np.around(v, 2)*u.km/u.s
+ 
+    
+        
+#PLOTS
+#plot mass profile for each galaxy of each component of the MW to a radius of 30 kpc
+#define an array of radii...start at 0.1
+#y-axis is in log
+#find best fitting Hernquist profile...guess the scale factor
+#--------------------------------- MW Mass Enclosed ---------------------------------
+
+galaxy = "MW"
+MP_MW = MassProfile(galaxy, 0)
+
+radii = []
+MW_bulge = []
+MW_halo = []
+MW_disk = []
+MW_total = []
+print("------------------------- MW Mass Enclosed ------------------------")
+radii = np.arange(0.25, 30.5, 1.5)*u.kpc
+#test mass enclosed
+MW_halo=MP_MW.MassEnclosed(1,radii)
+#print(f"MW_halo = {MW_halo}")
+
+MW_disk=MP_MW.MassEnclosed(2,radii) 
+#print(f"MW_disk = {MW_disk}")
+
+MW_bulge=MP_MW.MassEnclosed(3,radii) 
+#print(f"MW_bulge = {MW_bulge}")
+
+MW_total = MP_MW.MassEnclosedTotal(radii)
+#print("MW_total =",MW_total)
+"""
+#Plot the mass profile for a galaxy
+fig = plt.figure(figsize=(20,20),constrained_layout=True)
+spec2 = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+ax1 = fig.add_subplot(spec2[0, 0])
+ax2 = fig.add_subplot(spec2[0, 1])
+ax3 = fig.add_subplot(spec2[1, 0])
+ax4 = fig.add_subplot(spec2[1, 1])
+
+
+ax1.set_title("MW Mass Enclosed - Halo Mass")
+ax1.semilogy(radii,MW_halo,color='orange',marker='o')
+ax1.set_xlabel("Radius (kpc)")
+ax1.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax2.set_title("MW Mass Enclosed - Disk Stars")
+ax2.semilogy(radii,MW_disk,color='blue',marker='^')
+ax2.set_xlabel("Radius (kpc)")
+ax2.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax3.set_title("MW Mass Enclosed - Bulge Stars")
+ax3.semilogy(radii,MW_bulge,color='red',marker='s')
+ax3.set_xlabel("Radius (kpc)")
+ax3.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax4.set_title("MW Mass Enclosed - Total")
+ax4.semilogy(radii,MW_total,color='green',marker='x')   
+ax4.set_xlabel("Radius (kpc)")
+ax4.set_ylabel("Log(Mass Enclosed (Msun))")
+"""
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("MW Mass Enclosed - All Together")
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Log(Mass Enclosed (Msun))")
+plt.semilogy(radii,MW_bulge, color='red', linewidth=5, label='Bulge stars')
+plt.semilogy(radii,MW_disk, color='blue', linewidth=5, label='Disk stars')
+plt.semilogy(radii,MW_halo,color='orange', linewidth=5, label='Halo stars')
+plt.semilogy(radii,MW_total, color='green', linewidth=5, label='Total')
+legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()
+
+#------------------------ MW Best Match Hernquist testing -----------------------------------------
+## Determine Best Fitting Hernquist profile
+##                               
+#Use the total dark matter mass of each galaxy - could call old program / enter the values from it
+MW_Mhalo=1.975*1e10*u.Msun
+M31_Mhalo=1.921*1e10*u.Msun
+M33_Mhalo=0.187*1e10*u.Msun
+
+#Find a scale factor a where the Hernquist profile best matches the plotted mass profile 
+#as a function of radius
+
+#Do this by plotting the Henrquis profile on top of the simulated disk dark matter halo mass profile
+#Then keep changing a until the mass distributions reasonable agree.
+
+testa=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
+
+a=testa*u.kpc    
+MW_Hernquist=[]
+i=0
+for i in range(len(radii)):
+    MW_Hernquist.append(MP_MW.HernquistMass(radii[i],a,MW_Mhalo).value)
+    i+=1
+MW_Hernquist*u.Msun
+
+#print("MW_Herquist = ",MW_Hernquist) 
+   
+fig,ax=plt.subplots(figsize=(10,10))
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Log(Mass Enclosed (Msun))")
+ax.set_title("MW Best Match Hernquist with Halo")
+plt.semilogy(radii,MW_Hernquist, color="black",linewidth=5,label="Hernquist")       
+plt.semilogy(radii,MW_halo, color='orange', linewidth=5, label='Halo stars')
+#legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()   
+    
+#Alternative method
+#Print out values for the simulated enclosed mass at 30 kpc and
+#change a unitl you get a reasonalbe agreement with the Hernquist profile
+
+# 30 kpc would be the second to last value radii = 30 kpc
+#print("radii = ",radii)
+#--------------------------------- M31 Mass Enclosed ---------------------------------
+
+galaxy = "M31"
+MP_M31 = MassProfile(galaxy, 0)
+
+#radii = []  # Used for testing individual galaxies
+M31_bulge = []
+M31_halo = []
+M31_disk = []
+M31_total = []
+print("------------------------- M31 Mass Enclosed ------------------------")
+
+#radii = np.arange(0.25, 30.5, 1.5)*u.kpc # Used for testing individual galaxies
+#test mass enclosed
+M31_halo=MP_M31.MassEnclosed(1,radii)
+#print(f"M31_halo = {M31_halo}")
+
+M31_disk=MP_M31.MassEnclosed(2,radii) 
+#print(f"M31_disk = {M31_disk}")
+
+M31_bulge=MP_M31.MassEnclosed(3,radii) 
+#print(f"M31_bulge {M31_bulge}")
+
+M31_total = MP_M31.MassEnclosedTotal(radii)
+#print("M31_total =",M31_total)
+"""
+#Plot the mass profile for a galaxy
+fig = plt.figure(figsize=(20,20),constrained_layout=True)
+spec2 = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+ax1 = fig.add_subplot(spec2[0, 0])
+ax2 = fig.add_subplot(spec2[0, 1])
+ax3 = fig.add_subplot(spec2[1, 0])
+ax4 = fig.add_subplot(spec2[1, 1])
+
+ax1.set_title("M31 Mass Enclosed - Halo")
+ax1.semilogy(radii,M31_halo,color='orange',marker='o')
+ax1.set_xlabel("Radius (kpc)")
+ax1.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax2.set_title("M31 Mass Enclosed - Disk Stars")
+ax2.semilogy(radii,M31_disk,color='blue',marker='^')
+ax2.set_xlabel("Radius (kpc)")
+ax2.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax3.set_title("M31 Mass Enclosed - Bulge Stars")
+ax3.semilogy(radii,M31_bulge,color='red',marker='s')
+ax3.set_xlabel("Radius (kpc)")
+ax3.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax4.set_title("M31 Mass Enclosed - Totals")
+ax4.semilogy(radii,M31_total,color='green',marker='x')
+ax4.set_xlabel("Radius (kpc)")
+ax4.set_ylabel("Log(Mass Enclosed (Msun))")
+plt.show()            
+"""
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("M31 Mass Enlosed - All Together") 
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Log(Mass Enclosed (Msun))")       
+plt.semilogy(radii,M31_bulge, color='red', linewidth=5, label='Bulge stars')
+plt.semilogy(radii,M31_disk, color='blue', linewidth=5, label='Disk stars')
+plt.semilogy(radii,M31_halo, color='orange', linewidth=5, label='Halo stars')
+plt.semilogy(radii,M31_total, color='green', linewidth=5, label='Total')
+legend = ax.legend(loc='lower right', shadow=True, fontsize='large')       
+plt.show()       
+
+#------------------------ M31 Best Match Hernquist testing --------------------------
+testa=[2,4,6,8,10,12,14,16,18]
+
+a=testa*u.kpc    
+M31_Hernquist=[]
+i=0
+for i in range(len(radii)):
+    M31_Hernquist.append(MP_M31.HernquistMass(radii[i],a,M31_Mhalo).value)
+    i+=1
+M31_Hernquist*u.Msun
+
+#print("MW_Herquist = ",MW_Hernquist) 
+   
+fig,ax=plt.subplots(figsize=(10,10))
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Log(Mass Enclosed (Msun))")
+ax.set_title("M31 Best Match Hernquist with Halo")
+plt.semilogy(radii,M31_Hernquist, color="black",linewidth=5,label="Hernquist")       
+plt.semilogy(radii,M31_halo, color='orange', linewidth=5, label='Halo stars')
+#legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()
+    
+#--------------------------------- M33 Mass Enclosed ---------------------------------
+galaxy = "M33"
+MP_M33 = MassProfile(galaxy, 0)
+
+#radii = [] #used for testing individual galaxies
+M31_bulge = []
+M31_halo = []
+M31_disk = []
+M31_total = []
+print("------------------------- M33 Mass Enclosed ------------------------")
+
+#radii = np.arange(0.25, 30.5, 1.5)*u.kpc #Used for testing individual galaxies
+#test mass enclosed
+M33_halo=MP_M33.MassEnclosed(1,radii)
+M33_disk=MP_M33.MassEnclosed(2,radii) 
+#print(f"M33_halo = {M33_halo}")
+#print(f"M33_disk = {M33_disk}")
+
+M33_total = MP_M33.MassEnclosedTotal(radii)
+#print("M33_total =",M33_total)
+"""
+#Plot the mass profile for a galaxy
+fig = plt.figure(figsize=(20,20),constrained_layout=True)
+spec2 = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+ax1 = fig.add_subplot(spec2[0, 0])
+ax2 = fig.add_subplot(spec2[0, 1])
+ax3 = fig.add_subplot(spec2[1, 0])
+#ax4 = fig.add_subplot(spec2[1, 1])
+
+ax1.set_title("M33 Mass Enclosed - Halo")
+ax1.semilogy(radii,M33_halo,color='orange',marker='o')
+ax1.set_xlabel("Radius (kpc)")
+ax1.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax2.set_title("M33 Mass Enclosed - Disk Stars")
+ax2.semilogy(radii,M33_disk,color='blue',marker='^')
+ax2.set_xlabel("Radius (kpc)")
+ax2.set_ylabel("Log(Mass Enclosed (Msun))")
+
+ax3.set_title("M33 Mass Enclosed - Totals")
+ax3.semilogy(radii,M33_total,color='green',marker='x')
+ax3.set_xlabel("Radius (kpc)")
+ax3.set_ylabel("Log(Mass Enclosed (Msun))")
+# No ax4 here
+plt.show()
+"""
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("M33 Mass Enclosed - All Together")  
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Log(Mass Enclosed (Msun))")         
+plt.semilogy(radii, M33_disk, color='blue', linewidth=5, label='Disk stars')
+plt.semilogy(radii, M33_halo, color='orange', linewidth=5, label='Halo stars')
+plt.semilogy(radii, M33_total, color='green', linewidth=5, label='Total')
+legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()
+
+#------------------------ M33 Best Match Hernquist testing -----------------------------------------
+testa=[10000,20000,30000,40000,50000,60000,80000,100000]
+
+a=testa*u.kpc    
+M33_Hernquist=[]
+i=0
+for i in range(len(radii)):
+    M33_Hernquist.append(MP_M33.HernquistMass(radii[i],a,M33_Mhalo).value)
+    i+=1
+M31_Hernquist*u.Msun
+
+#print("MW_Herquist = ",MW_Hernquist) 
+   
+fig,ax=plt.subplots(figsize=(10,10))
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Log(Mass Enclosed (Msun))")
+ax.set_title("M33 Best Match Hernquist with Halo")
+plt.semilogy(radii,M33_Hernquist, color="black",linewidth=5,label="Hernquist")       
+plt.semilogy(radii,M33_halo, color='orange', linewidth=5, label='Halo stars')
+#legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()
+
+###################################  Velocity #######################################
+
+#--------------------------------- MW Circular Velocity ---------------------------------
+
+galaxy = "MW"
+MP_MW = MassProfile(galaxy, 0)
+
+#radii = [] # Used for testing individual galaxies
+MW_bulge = []
+MW_halo = []
+MW_disk = []
+MW_total = []
+print("------------------------- MW Circular Velocity ------------------------")
+
+#radii = np.arange(0.25, 30.5, 1.5)*u.kpc # Used for testing individual galaxies
+#test Circular Velocity
+MW_halo=MP_MW.CircularVelocity(1,radii)
+MW_disk=MP_MW.CircularVelocity(2,radii) 
+#print(f"MW_halo = {MW_halo}")
+MW_bulge=MP_MW.CircularVelocity(3,radii) 
+#    print(MW_bulge)
+ 
+
+MW_total = MP_MW.CircularVelocityTotal(radii)
+#print("MW_total =",MW_total)
+"""
+#Plot the circular velocity profile for a galaxy
+fig = plt.figure(figsize=(20,20),constrained_layout=True)
+spec2 = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+ax1 = fig.add_subplot(spec2[0, 0])
+ax2 = fig.add_subplot(spec2[0, 1])
+ax3 = fig.add_subplot(spec2[1, 0])
+ax4 = fig.add_subplot(spec2[1, 1])
+
+ax1.set_title("MW Circular Velocity - Halo")
+ax1.plot(radii,MW_halo,color='orange',marker='o')
+ax1.set_xlabel('Radius (kpc)', fontsize=12)
+ax1.set_ylabel('Speed (km/s)', fontsize=12)
+
+ax2.set_title("MW Circular Velocity - Disk Stars")
+ax2.plot(radii,MW_disk,color='blue',marker='^')
+ax2.set_xlabel('Radius (kpc)', fontsize=12)
+ax2.set_ylabel('Speed (km/s)', fontsize=12)
+
+ax3.set_title("MW Circular Velocity - Bulge Stars")
+ax3.plot(radii,MW_bulge,color='red',marker='s')
+ax3.set_xlabel('Radius (kpc)', fontsize=12)
+ax3.set_ylabel('Speed (km/s)', fontsize=12)
+
+ax4.set_title("MW Circular Velocity - Totals")
+ax4.plot(radii,MW_total,color='green',marker='x')
+ax4.set_xlabel('Radius (kpc)', fontsize=12)
+ax4.set_ylabel('Speed (km/s)', fontsize=12)
+plt.show()
+"""
+##
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("MW Circular Velocity - All Together")    
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Speed (km/s)")  #### SHOULD THIS BE A LOG PLOT????    
+plt.plot(radii,MW_bulge, color='red', linewidth=5, label='Bulge stars')
+plt.plot(radii,MW_disk, color='blue', linewidth=5, label='Disk stars')
+plt.plot(radii,MW_halo, color='orange', linewidth=5, label='Halo stars')
+plt.plot(radii,MW_total, color='green', linewidth=5, label='Total')
+legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()
+
+#--------------------------------MW Best Fit Hernquist circular speed----------------------
+testa=[.1,.2,.3,1,2,3] #1 looks best
+
+a=testa*u.kpc 
+#
+MW_Hernquist=[] 
+
+i=0
+for i in range(len(radii)):   
+    MW_Hernquist.append(MP_MW.HernquistVCirc(radii[i],a,MW_Mhalo).value)
+    i+=1
+MW_Hernquist=MW_Hernquist*u.Msun
+
+#print("MW_Herquist = ",MW_Hernquist)  
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("MW Best Fit - Hernquist Circular Velocity")  
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Speed (km/s)")   
+plt.plot(radii,MW_total, color='green', linewidth=5, label='Total')
+plt.plot(radii,MW_Hernquist,color="black",linewidth=5,label="Hernquist")    
+#legend = ax.legend(loc='lower right', shadow=True, fontsize='large')   
+plt.show()
+
+#--------------------------------- M31 Circular Velocity ---------------------------------
+galaxy = "M31"
+MP_M31 = MassProfile(galaxy, 0)
+
+#radii = [] # Used for testing individual galaxies
+M31_bulge = []
+M31_halo = []
+M31_disk = []
+M31_total = []
+print("------------------------- M31 Circular Velocity ------------------------")
+#radii = np.arange(0.25, 30.5, 1.5)*u.kpc # Used for testing individual galaxies
+#test mass enclosed
+M31_halo=MP_M31.CircularVelocity(1,radii)
+
+M31_disk=MP_M31.CircularVelocity(2,radii) 
+#print(f"M31_halo = {M31_halo}")
+#print(f"M31_disk = {M31_disk}")
+M31_bulge=MP_M31.CircularVelocity(3,radii) 
+#    print(f"M31_bulge {M31_bulge}")
+#print(MP_MW.MassEnclosed(1,radii)) 
+
+M31_total = MP_M31.CircularVelocityTotal(radii)
+#print("M31_total =",M31_total)
+"""
+#Plot the mass profile for a galaxy
+fig = plt.figure(figsize=(20,20),constrained_layout=True)
+spec2 = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+ax1 = fig.add_subplot(spec2[0, 0])
+ax2 = fig.add_subplot(spec2[0, 1])
+ax3 = fig.add_subplot(spec2[1, 0])
+ax4 = fig.add_subplot(spec2[1, 1])
+
+ax1.set_title("M31 Circular Velocity - Halo")
+ax1.plot(radii,M31_halo,color='orange',marker='o')
+ax1.set_xlabel("Radius (kpc)")
+ax1.set_ylabel("Speed (km/s)")
+
+ax2.set_title("M31 Circular Velocity - Disk Stars")
+ax2.plot(radii,M31_disk,color='blue',marker='^')
+ax2.set_xlabel("Radius (kpc)")
+ax2.set_ylabel("Speed (km/s)")
+
+ax3.set_title("M31 Circular Velocity - Bulge Stars")
+ax3.plot(radii,M31_bulge,color='red',marker='s')
+ax3.set_xlabel('Radius (kpc)', fontsize=12)
+ax3.set_ylabel('Speed (km/s)', fontsize=12)
+
+ax4.set_title("M31 Circular Velocity - Totals")
+ax4.plot(radii,M31_total,color='green',marker='x')
+ax4.set_xlabel('Radius (kpc)', fontsize=12)
+ax4.set_ylabel('Speed (km/s)', fontsize=12)
+plt.show()
+"""
+fig,ax = plt.subplots(figsize=(10,10))
+ax.set_title("M31 Circular Velocities - All Together")
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Speed (km/s)")   
+plt.plot(radii,M31_bulge, color='red', linewidth=5, label='Bulge stars')
+plt.plot(radii,M31_disk, color='blue', linewidth=5, label='Disk stars')
+plt.plot(radii,M31_halo, color='orange', linewidth=5, label='Halo stars')
+plt.plot(radii,M31_total, color='green', linewidth=5, label='Total')
+legend = ax.legend(loc='lower right', shadow=True, fontsize='large')        
+plt.show() 
+    
+#--------------------------------M31 Best Fit Hernquist circular speed----------------------
+testa=[2,4,6,8,10,12,14,16,18]
+
+a=testa*u.kpc 
+
+#
+M31_Hernquist=[]
+i=0
+for i in range(len(radii)):
+    M31_Hernquist.append(MP_M31.HernquistVCirc(radii[i],a,M31_Mhalo).value)
+    i+=1
+M31_Hernquist=M31_Hernquist*u.Msun
+
+#print("M31_Herquist = ",MW_Hernquist)  
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("M31 Best Fit - Hernquist Circular Velocity")  
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Speed (km/s)")   
+plt.plot(radii,M31_total, color='green', linewidth=5, label='Total')
+plt.plot(radii,M31_Hernquist,color="black",linewidth=5,label="Hernquist")    
+#legend = ax.legend(loc='lower right', shadow=True, fontsize='large')   
+plt.show()
+
+#-------------------------------- M33 Circular Velocity -----------------------------------
+ #M33
+galaxy = "M33"
+MP_M33 = MassProfile(galaxy, 0)
+
+#radii = [] # Used for testing individual galaxies
+M33_halo = []
+M33_disk = []
+M33_total = []
+print("------------------------- M33 Circular Velocity ------------------------")
+#radii = np.arange(0.25, 30.5, 1.5)*u.kpc # Used for testing individual galazies
+
+M33_halo=MP_M33.CircularVelocity(1,radii)
+#print(f"M33_halo = {M33_halo}")
+
+M33_disk=MP_M33.CircularVelocity(2,radii) 
+#print(f"M33_disk = {M33_disk}")
+
+M33_total = MP_M33.CircularVelocityTotal(radii)
+#print("M33_total =",M33_total)
+"""
+#Plot the circular speed profile for a galaxy
+fig = plt.figure(figsize=(20,20),constrained_layout=True)
+spec2 = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+ax1 = fig.add_subplot(spec2[0, 0])
+ax2 = fig.add_subplot(spec2[0, 1])
+ax3 = fig.add_subplot(spec2[1, 0])
+#ax4 = fig.add_subplot(spec2[1, 1])
+
+ax1.set_title("M33 Circular Velocity - Halo")
+ax1.plot(radii,M33_halo,color='orange',marker='o')
+ax1.set_xlabel("Radius (kpc)")
+ax1.set_ylabel("Speed (km/s)")
+
+ax2.set_title("M33 Circular Velocity - Disk Stars")
+ax2.plot(radii,M33_disk,color='blue',marker='^')
+ax2.set_xlabel('Radius (kpc)', fontsize=12)
+ax2.set_ylabel('Speed (km/s)', fontsize=12)
+
+ax3.set_title("M33 Cirular Velocity - Totals")
+ax3.plot(radii,M33_total,color='green',marker='x')
+ax3.set_xlabel('Radius (kpc)', fontsize=12)
+ax3.set_ylabel('Speed (km/s)', fontsize=12)
+#No ax4
+
+plt.show()
+"""
+
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("M33 Circular Velocity - All Together")
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Speed (km/s)")   
+plt.plot(radii, M33_disk, color='blue', linewidth=5, label='Disk stars')
+plt.plot(radii, M33_halo, color='orange', linewidth=5, label='Halo stars')
+plt.plot(radii, M33_total, color='green', linewidth=5, label='Total')
+legend = ax.legend(loc='lower right', shadow=True, fontsize='large')
+plt.show()             
+
+#--------------------------------M33 Best Fit Hernquist circular speed----------------------
+
+
+
+####  Find best fit theoretical Henrquist circular speed for all galaxy 
+
+testa=[.1,.2,.3,.4,.5,1,2,3,4,5]
+
+a=testa*u.kpc 
+
+#
+M33_Hernquist=[]
+i=0
+for i in range(len(radii)):
+    M33_Hernquist.append(MP_M33.HernquistVCirc(radii[i],a,M33_Mhalo).value)
+    i+=1
+M33_Hernquist=M33_Hernquist*u.Msun
+
+#print("M33_Herquist = ",M33_Hernquist)  
+fig,ax=plt.subplots(figsize=(10,10))
+ax.set_title("M33 Best Fit - Hernquist Circular Velocity")  
+plt.xlabel("Radius (kpc)")
+plt.ylabel("Speed (km/s)")   
+plt.plot(radii,M33_total, color='green', linewidth=5, label='Total')
+plt.plot(radii,M33_Hernquist,color="black",linewidth=5,label="Hernquist")    
+#legend = ax.legend(loc='lower right', shadow=True, fontsize='large')   
+plt.show()
