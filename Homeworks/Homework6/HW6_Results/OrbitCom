@@ -1,0 +1,311 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar  2 18:02:37 2020
+
+@author: samantha
+"""
+
+# Homework 6 Template
+# G. Besla & R. Li
+
+
+
+
+# import modules
+import numpy as np
+import astropy.units as u
+from astropy.constants import G
+
+# import plotting modules
+import matplotlib.pyplot as plt
+import matplotlib
+
+# my modules
+from ReadFile import Read
+# Step 1: modify CenterOfMass so that COM_P now takes a parameter specifying 
+# by how much to decrease RMAX instead of a factor of 2
+from CenterOfMass2 import CenterOfMass
+
+
+
+
+def OrbitCom(galaxy, start, end, n):
+    # Inputs:
+    #   galaxy = the name of the galaxy
+    #   start = the number of the first snapshot to be read in
+    #   end = the number of the last snapshot to be read in
+    #   n = an integer indicating the intervals over which COM is returned
+    # Outpus:
+    #   compute the time and COM position and velocity vectors of a given galaxy in each snapshot
+    #   saves to an output file
+    #function that loops over all the desired snapshots to compute the COM pos and vel as a function of time.
+    print("OrbitCom")
+    # compose the filename for output
+    fileout = 'Orbit_'+galaxy+'.txt'
+    print("file out  = ", fileout)
+    #  set tolerance and VolDec for calculating COM_P in CenterOfMass
+    delta = 0.1
+    VolDec = 2
+    # for M33 that is stripped more, use different values for VolDec
+    if galaxy == "M33":
+        delta = 0.1
+        VolDec = 4
+
+    
+    # generate the snapshot id sequence 
+    # it is always a good idea to also check if the input is eligible (not required)
+    snap_ids = np.arange(start, end, n)
+    #check if eligible
+    if len(snap_ids) == 0:
+        print("Invalid snap ID start and end")
+        return
+    
+    # initialize the array for orbital info: t, x, y, z, vx, vy, vz of COM
+    orbit = np.zeros((len(snap_ids), 7))
+    
+    # a for loop to read in each snap and get a COM position and velocity
+    i = 0
+    snap_id  = 0
+    for i, snap_id in enumerate(snap_ids): # loop over files
+        
+        # compose the data filename (be careful about the folder)
+        directory  = "/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/"
+        
+        ilbl = '000' + str(snap_id)
+        #remove all but last 3 digits
+        ilbl = ilbl[-3:]
+        # create filenames
+        filename = directory+'%s_'%(galaxy)+ilbl+'.txt'
+        # Initialize an instance of CenterOfMass class, using disk particles
+        COM = CenterOfMass(filename,2)
+        # Store the COM pos and vel. Remember that now COM_P required VolDec
+        GalCOMP = COM.COM_P(delta,VolDec)
+        GalCOMV = COM.COM_V(GalCOMP[0].value, GalCOMP[1].value, GalCOMP[2].value)
+    
+        # store the time, pos, vel in ith element of the orbit array,  without units (.value) 
+        # note that you can store 
+        # a[i] = var1, *tuple(array1)
+        orbit[i] = COM.time.value/1000, GalCOMP[0].value, GalCOMP[1].value, GalCOMP[2].value, GalCOMV[0].value, GalCOMV[1].value, GalCOMV[2].value
+        
+        # print snap_id to see the progress
+        print(snap_id)
+        i += 1
+        snap_id += 1
+    # write the data to a file
+    # we do this because we don't want to have to repeat this process 
+    # this code should only have to be called once per galaxy.
+    np.savetxt(fileout, orbit, fmt = "%11.3f"*7, comments='#',
+               header="{:>10s}{:>11s}{:>11s}{:>11s}{:>11s}{:>11s}{:>11s}"\
+                      .format('t', 'x', 'y', 'z', 'vx', 'vy', 'vz'))
+
+def ReadOrbits(galaxy):
+    # Read in orbit data for a galaxy and returns data in an array
+    # Inputs:
+    #   galaxy: name of galaxy orbit file
+    # Output:
+    #   data: an array with labels using the header in line 1
+    print("ReadOrbits")
+    #create filename
+    filename = 'Orbit_'+galaxy+'.txt'
+    print("filename = ", filename)
+    #initialize
+    data = []
+    
+    #store remainder of file using np.genfromtxt, allows you to use column
+    #   header info (1st line of file, starting w/ #)
+    #Parameters:
+    #   dtype = None means line is split using white space
+    #   names = True creates arrays to store the data w/ the right labels
+    #   labels = t,x,y,z,vx,vy,vz
+    data = np.genfromtxt(filename, dtype = None, names = True)
+    return data
+
+def comp_mag(x, y, z):
+    #function to compute magnitude
+    #Inputs:
+    #   positions
+    #Output:
+    #   magnitude
+    mag = np.sqrt(x**2+y**2+z**2)
+    return mag
+
+# function to compute the magnitude of the difference between two vectors 
+# You can use this function to return both the relative position and relative velocity for two 
+# galaxies over the entire orbit 
+    
+def MagDiff(vector1, vector2):
+    #function to compute mag of difference between two vectors 
+    #will work for position and velocity
+    # Inputs:
+    #   vector 1: x,y,z values
+    #   vector 2: x,y,z values
+    # Output:
+    #   mag of difference of two vectors
+    return comp_mag(vector2[0]-vector1[0], vector2[1]-vector1[1], vector2[2]-vector1[2])
+
+# Recover the orbits and generate the COM files for each galaxy
+# read in 800 snapshots in intervals of n=5
+# Note: This might take a little while - test your code with a smaller number of snapshots first! 
+
+OrbitCom("MW", 0, 800, 5)
+OrbitCom("M31", 0, 800, 5)
+OrbitCom("M33", 0, 800, 5)
+
+# Read in the data files for the orbits of each galaxy that you just created
+# headers:  t, x, y, z, vx, vy, vz
+# using np.genfromtxt
+MW_Orbits = ReadOrbits("MW")
+M31_Orbits = ReadOrbits("M31")
+M33_Orbits = ReadOrbits("M33")
+
+ 
+# Determine the magnitude of the relative position and velocities 
+
+# of MW and M31
+MW_M31_MagDiff_Positions = []
+MW_M31_MagDiff_Velocities = []
+
+MW_M31_MagDiff_Positions = MagDiff((MW_Orbits['x'], MW_Orbits['y'], MW_Orbits['z']), (M31_Orbits['x'], M31_Orbits['y'], M31_Orbits['z']))
+MW_M31_MagDiff_Velocities = MagDiff((MW_Orbits['vx'], MW_Orbits['vy'], MW_Orbits['vz']), (M31_Orbits['vx'], M31_Orbits['vy'], M31_Orbits['vz']))
+
+# of M33 and M31
+M33_M31_MagDiff_Positions = []
+M33_M31_MagDiff_Velocities = []
+
+M33_M31_MagDiff_Positions = MagDiff((M33_Orbits['x'], M33_Orbits['y'], M33_Orbits['z']), (M31_Orbits['x'], M31_Orbits['y'], M31_Orbits['z']))
+M33_M31_MagDiff_Velocities = MagDiff((M33_Orbits['vx'], M33_Orbits['vy'], M33_Orbits['vz']), (M31_Orbits['vx'], M31_Orbits['vy'], M31_Orbits['vz']))
+
+
+# Plot the Orbit of the galaxies 
+#################################
+
+######Plot MW_M31_MagDiff_Positions######
+
+fig = plt.figure(figsize = (10,10))
+ax = plt.subplot(111)
+
+#Plot mag diff as a function of time (column 0)
+plt.plot(MW_Orbits['t'], MW_M31_MagDiff_Positions, color = 'magenta', linewidth = 5, label = 'MW_M31')
+
+#axis labels
+plt.xlabel('Time (Gyr)', fontsize = 22 )
+plt.ylabel('Separation (kpc)', fontsize = 22)
+
+#add legend
+#legend = ax.legend(loc = 'lower right', fontsize = 'x-large')
+plt.legend()
+
+#add fig text
+plt.figtext(0.15, 0.83, 'MW vs M31 Relative Positions', fontsize = 22)
+#plt.show()
+
+#save file
+plt.savefig('MW_M31_Positions_Orbits', dpi = 300)
+
+######Try semilogy######
+fig = plt.figure(figsize = (10,10))
+ax = plt.subplot(111)
+
+#Plot mag diff as a function of time (column 0)
+plt.semilogy(MW_Orbits['t'], MW_M31_MagDiff_Positions, color = 'magenta', linewidth = 5, label = 'MW_M31')
+
+#axis labels
+plt.xlabel('Time (Gyr)', fontsize = 22 )
+plt.ylabel('Separation (kpc)', fontsize = 22)
+
+#add legend
+#legend = ax.legend(loc = 'lower right', fontsize = 'x-large')
+plt.legend()
+
+#add fig text
+plt.figtext(0.15, 0.83, 'MW vs M31 Relative Positions', fontsize = 22)
+#plt.show()
+
+#save file
+plt.savefig('MW_M31_Log_Positions_Orbits', dpi = 300)
+######Plot M33_M31_MagDiff_Positions######
+
+
+fig = plt.figure(figsize = (10,10))
+ax = plt.subplot(111)
+
+#Plot mag diff as a function of time (column 0)
+plt.plot(M33_Orbits['t'], M33_M31_MagDiff_Positions, color = 'blue', linewidth = 5, label = 'M33_M31')
+
+#axis labels
+plt.xlabel('Time (Gyr)', fontsize = 22)
+plt.ylabel('Separation (kpc)', fontsize = 22)
+
+#add legend
+#legend = ax.legend(loc = 'lower right', fontsize = 'x-large')
+plt.legend()
+plt.savefig('M33_M31_Positions_Orbits', dpi = 300)
+#add fig text
+plt.figtext(0.15, 0.83, 'M33 vs M31 Relative Positions', fontsize = 22)
+#plt.show()
+
+#save file
+#plt.legend()
+
+# Plot the orbital velocities of the galaxies 
+#################################
+
+######Plot MW_M31_MagDiff_Velocities######
+fig = plt.figure(figsize = (10,10))
+ax = plt.subplot(111)
+
+#Plot mag diff as a function of time (column 0)
+plt.plot(MW_Orbits['t'], MW_M31_MagDiff_Velocities, color = 'magenta', linewidth = 5, label = 'MW_M31')
+
+#axis labels
+plt.xlabel('Time (Gyr)', fontsize = 22)
+plt.ylabel('Separation (m/s)', fontsize = 22)
+
+#add legend
+#legend = ax.legend(loc = 'lower right', fontsize = 'x-large')
+plt.legend()
+
+#add fig text
+plt.figtext(0.15, 0.83, 'MW vs M31 Relative Velocities', fontsize = 22)
+#plt.show()
+
+#save file
+plt.savefig('MW_M31_Velocities_Orbits', dpi = 300)
+
+######Plot M33_M31_MagDiff_Velocities######
+
+
+fig = plt.figure(figsize = (10,10))
+ax = plt.subplot(111)
+
+#Plot mag diff as a function of time (column 0)
+plt.plot(M33_Orbits['t'], M33_M31_MagDiff_Velocities, color = 'blue', linewidth = 5, label = 'M33_M31')
+
+#axis labels
+plt.xlabel('Time (Gyr)', fontsize = 22)
+plt.ylabel('Separation (kpc)', fontsize = 22)
+
+#add legend
+#legend = ax.legend(loc = 'lower right', fontsize = 'x-large')
+plt.legend()
+
+#add fig text
+plt.figtext(0.15, 0.83, 'M33 vs M31 Relative Velocities', fontsize = 22)
+# plt.show()
+
+#save file
+
+plt.savefig('M33_M31_Velocities_Orbits', dpi = 300)
+
+"""
+###### QUESTIONS ######
+1. MW and M31 will have two close encounters and then merge
+
+2. The time evolution of the separation and relative velocity are related by 
+    when the two galaxies are farther away, the velocity is slower. 
+    However, when the two galaxies are closer, the velocity is faster, and
+    they are slingshotted past each other.
+
+3. MW and M31 will merge in just over 6 Gyr. M33's orbit decays.
+"""
