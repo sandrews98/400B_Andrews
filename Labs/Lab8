@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 
 # Function that returns SFR given luminosity of galaxy
 def SFR(L, Type, TIR=0):
-    """ Computes STR of a galaxy following Kennicutt & Evans 2012 Eq 12"""
+    """ Computes SFR of a galaxy following Kennicutt & Evans 2012 Eq 12"""
     # Inputs:
     #   L = luminosity of the galaxy in erg/s
     #   Type = string that lists the wavelength : FUV, NUV, TIR, Halpha
