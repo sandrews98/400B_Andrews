@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr  6 15:39:41 2020
+
+@author: samantha
+"""
+
+"""
+Research Assignment 3:
+    Topic: M33's Future Density Profile and Star Formation Rate
+    
+    Question 1: What can we infer about the SFR from the density profile? 
+                Will there be a burst in star formation?
+
+Equation to be used:
+    fitting the stellar disk, use the surface density profile for disks:
+    I(r) = I_0 * e^[-(r/h)^(1/n)]
+    I_0 = central intensity
+    h = scale length (radius at which intensity drops bt e-1)
+    n = Sersic index 
+    
+Gurtina's suggestion on how to measure SFR:
+
+    1) Determine the real M33 gas mass
+        https://ui.adsabs.harvard.edu/abs/2009ApJ...703.1486P/abstract
+        1.4e9 M_sun at the distance of 730pc. The dependency is M_HI 
+        proportional to D**2, so using the largest M33 distance of 
+        964 kpc all H1 regions should be multiplied by 1.7. So total gas
+        mass is 2.38e9 M_sun. 
+
+    2) Figure out the mass *ratio* between gas and stars
+        Homework 3 gave the disk mass of M33 to be 0.009e12 Msun, and the total
+        mass to be 0.196e12 M_sun.
+        ratio between gas and stars = gas / stars = gas / disk mass 
+        (M33 doesn't have a bulge)
+        ratio = 2.38e9 / 0.009e12 = 0.264
+
+    3) make plots of the surface density of stars in M33 
+        (mass/area as a function of radius).  Translate that into gas surface 
+        density using the ratio between gas and stars from #2 
+
+    4) Use the Kennicutt Schmidt relation to translate the gas density into a 
+        star formation rate. 
+         \Sigma_{SFR} = (2.5 \pm{0.7}) \times 10^{-4} (\frac{\Sigma_{gas}}{1 M_{sun} pc^{-2}})^{1.4 \pm{0.15}} M_{sun} yr^{-1} kpc^{-2}
+         
+         or
+         
+         \Sigma_{SFR} = A \Sigma_{gas}^N, 
+             \Sigma_{gas}: surface density of gas
+             A: the absolute SFR efficiency
+             N: most values fall in the range 1-2 depending on tracers and 
+             the linear scales considered
+         From Kennicutt 1997: https://arxiv.org/abs/astro-ph/9712213
+
+    5)[ if you have time ] 
+        You can even then use that star formation rate at each point in the 
+        orbit to decrease the gas mass at each point in time and determine 
+        when you think all the gas would be used up by. 
+    
+Methods:
+    => Similar to Lab 6: 
+        create a function to calculate the surface density profile for disks
+        n = 1 for spiral galaxies --> M33 is currently a gas rich late type 
+        spiral that could evolved into a gas poor spiral or elliptial once
+        M31 and MW collide. n = 4 for ellipical galaxies
+    
+"""
+
+
+# Load Modules
+import numpy as np
+import astropy.units as u
+
+# import plotting modules
+import matplotlib.pyplot as plt
+import matplotlib
+
+# my modules
+from ReadFile import Read
+from CenterOfMass import CenterOfMass
+from MassProfile import MassProfile
+
+
+#give an array of radii
+#function to return Sersic profile for a spiral system
+def SersicS(r, h_r, n):
+    #Inputs:
+    #   r: array of radii [kpc]
+    #   h_r: scalelength (radius at which intensity drops by e-1)
+    #   n: Sersic index, n = 1 for spirals and n = 4 for ellipticals
+    #Return:
+    #   surface brightness profile
+    
+    # I_0: central intenstiy
+    # I_0 = ????
+    
+    #exponent
+    A = (r/h_r)**(1/n)
+    
+    return I_0*np.exp(-A)
+
+
+# Comput the surface density profile for the simulated bulge
+# 
+# Create an instance of the MassProfile Class for M33. 
+# Store it as a variable `M33`. 
+# 
+M33 = MassProfile("M33", 0)
+
+# Create an array of radii from 0.1 kpc to 30 kpc in increments of 0.1
+# should be changed to ???
+r = np.arange(0.1, 30, 0.1)
+
+# DiskMass != Luminosity ??? so next two lines not needed?
+DiskMass = M33.MassEnclosed(2, r)  #particle type 2 = disk stars
+print(DiskMass[10])
+
+# Total luminosity = pi * I_0 * (h_r)^2 * (2n)!
+L = np.pi*I_0*h_r**2 * np.math.factorial(2*n)
+
+
+# Define a new array called `DiskMass`, that uses the function 
+#   `MassEnclosed` within MassProfile to compute the mass profile of the disk.  
+#   Get rid of astropy units in `DiskMass` by adding `.value` 
+# I = L / 4 pi D^2
+DiskI = L/4/np.pi/r**2
+
+# Compute the surface mass density profile for the simulated disk and 
+#   store it as an array called `DiskI`. Assuming M/L ~ 1 this is also the 
+#   surface brightness profile in Lsun/kpc^2
+
+# Plot the surface density profile of the simulated disk
+# 
+# Plot the Sersic profile, assuming an exponential profile.
+# 
+# If the profiles don't match, try changing $n$
+
+
+# Plot the Disk density profile vs the Sersic profile
+####################################
+
+
+fig = plt.figure(figsize=(10,10))
+ax = plt.subplot(111)
+
+
+# plot the disk luminosity density as a proxy for surface brighntess
+plt.semilogy(r, DiskI, color='black',linewidth=3, label='Disk Density')
+
+
+# Sersic fit to the surface brightness Sersic fit
+# Sersic 
+plt.semilogy(r, SersicS(r, h_r, 1), color = 'red', linestyle = "-.", Linewidth = 3, label = 'Sersic n = 1')
+
+
+#adjust tick label font size
+label_size = 22
+matplotlib.rcParams['xtick.labelsize'] = label_size 
+matplotlib.rcParams['ytick.labelsize'] = label_size
+
+
+# Add axis labels
+plt.xlabel('Radius (kpc)', fontsize=22)
+plt.ylabel('Log(I)  $L_\odot/kpc^2$', fontsize=22)
+
+
+
+# add a legend with some customizations.
+legend = ax.legend(loc='upper right',fontsize='x-large')
+
+plt.show()
+
+
+
+
+
+
+
+
