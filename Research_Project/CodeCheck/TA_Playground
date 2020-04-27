@@ -261,12 +261,9 @@ ax.semilogy(sdp0.r_annuli, sdp0.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp0.
 ax.semilogy(sdp0.r_annuli, sdp0.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Snap 0")
 
-ax.legend(loc='best')
-fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 0', dpi = 350)
-plt.show()
+
 
 ### snap shot 400 ###
-fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(sdp1.r_annuli, sdp1.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp1.com.time.value/1e3), lw=2, alpha=0.75)
 #ax.semilogy(sdp2.r_annuli, sdp2.Sigma, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
 #ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$10^{10} M_\odot$ / kpc$^2$]", title="M33 Stellar Disk", 
@@ -274,12 +271,8 @@ ax.semilogy(sdp1.r_annuli, sdp1.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp1.
 ax.semilogy(sdp1.r_annuli, sdp1.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp1.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Snap 400")
 
-ax.legend(loc='best')
-fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 400', dpi = 350)
-plt.show()
 
 ### snap shot 801 ###
-fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(sdp2.r_annuli, sdp2.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
 #ax.semilogy(sdp2.r_annuli, sdp2.Sigma, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
 #ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$10^{10} M_\odot$ / kpc$^2$]", title="M33 Stellar Disk", 
@@ -287,8 +280,10 @@ ax.semilogy(sdp2.r_annuli, sdp2.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp2.
 ax.semilogy(sdp2.r_annuli, sdp2.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Snap 801")
 
+ax.set_xlim(0,14)
+
 ax.legend(loc='best')
-fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 801', dpi = 350)
+fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 0, 400, 801', dpi = 350)
 plt.show()
 
 """
