@@ -246,27 +246,58 @@ class SurfaceDensityProfile:
         self.r_annuli = np.sqrt(self.radii[1:] * self.radii[:-1])
         
 # read in three example snapshots
-#sdp0 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 0)
-sdp1 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 0)
-#sdp2 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 801)
+sdp0 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 0)
+sdp1 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 400)
+sdp2 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 801)
 # plot the surface density profiles of the M33 stellar disk
+
+#### Snapshot 0 ###
 fig, ax = plt.subplots(figsize=(9, 8))
 #ax.semilogy(sdp0.r_annuli, sdp0.Sigma/10e10, label="$t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
+ax.semilogy(sdp0.r_annuli, sdp0.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
+#ax.semilogy(sdp2.r_annuli, sdp2.Sigma, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
+#ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$10^{10} M_\odot$ / kpc$^2$]", title="M33 Stellar Disk", 
+#       xlim=(-2, 80), ylim=(10e6, 10e9))
+ax.semilogy(sdp0.r_annuli, sdp0.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
+ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Snap 0")
+
+ax.legend(loc='best')
+fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 0', dpi = 350)
+plt.show()
+
+### snap shot 400 ###
+fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(sdp1.r_annuli, sdp1.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp1.com.time.value/1e3), lw=2, alpha=0.75)
 #ax.semilogy(sdp2.r_annuli, sdp2.Sigma, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
 #ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$10^{10} M_\odot$ / kpc$^2$]", title="M33 Stellar Disk", 
 #       xlim=(-2, 80), ylim=(10e6, 10e9))
 ax.semilogy(sdp1.r_annuli, sdp1.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp1.com.time.value/1e3), lw=2, alpha=0.75)
-ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk")
+ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Snap 400")
 
 ax.legend(loc='best')
-fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 0', dpi = 350)
+fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 400', dpi = 350)
 plt.show()
-densities = sdp1.Sigma*10**10 # in Msun / kpc**2
+
+### snap shot 801 ###
+fig, ax = plt.subplots(figsize=(9, 8))
+ax.semilogy(sdp2.r_annuli, sdp2.Sigma*10e10, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
+#ax.semilogy(sdp2.r_annuli, sdp2.Sigma, label="$t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
+#ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$10^{10} M_\odot$ / kpc$^2$]", title="M33 Stellar Disk", 
+#       xlim=(-2, 80), ylim=(10e6, 10e9))
+ax.semilogy(sdp2.r_annuli, sdp2.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp2.com.time.value/1e3), lw=2, alpha=0.75)
+ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Snap 801")
+
+ax.legend(loc='best')
+fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 801', dpi = 350)
+plt.show()
+
+"""
+
+densities = sdp0.Sigma*10**10 # in Msun / kpc**2
 density_pc = densities*(u.Msun/u.kpc**2).to(u.Msun/u.pc**2) # convert kpc**2 to pc**2
 #print(densities)
 #print(density_pc)
-radii = sdp1.r_annuli
+radii = sdp0.r_annuli
 radii_pc = radii*u.kpc.to(u.pc)
 #print("radii", radii)
 #print("radii_pc", radii_pc)
@@ -280,20 +311,20 @@ SFR = SFD * np.pi*sdp1.r_annuli**2
 #print("SFR =",SFR)
 
 fig, ax = plt.subplots(figsize=(9, 8))
-ax.semilogy(sdp1.r_annuli, SFD, label="Gass SFD at $t={:.1f}$ Gyr".format(sdp1.com.time.value/1e3), lw=2, alpha=0.75)
+ax.semilogy(sdp0.r_annuli, SFD, label="Gass SFD at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"SFD [$M_\odot$ $yr^{-1}$ kpc$^{-2}$]]", title="M33 SFD")
 fig.savefig('M33 SFD vs Radius ', dpi = 350)
 plt.show()
 
 # Does it even make sense to plot this since SFR isn't a function of radius?
 fig, ax = plt.subplots(figsize=(9, 8))
-ax.semilogy(sdp1.r_annuli, SFR, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp1.com.time.value/1e3), lw=2, alpha=0.75)
+ax.semilogy(sdp0.r_annuli, SFR, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"SFR [$M_\odot$ $yr^{-1}$]", title="M33 SFR")
 fig.savefig('M33 SFR vs Radius ', dpi = 350)
 plt.show()
 
 
-"""
+
 
 ################################
 ### Disk Internal Structure ###
