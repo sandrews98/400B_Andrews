@@ -20,6 +20,7 @@ import astropy.constants as c
 from RL_ReadFile import Read
 # matplotlib provides powerful functions for plotting figures
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
 # Plotly's Python graphing library makes interactive, publication-quality graphs
 import plotly.graph_objects as plygo
 
@@ -292,12 +293,12 @@ def Densities(galaxy, start, end, n):
         #print("x_axis[i]",x_axis[i])
         #print("max sigma = ",np.max(sdp1.Sigma))
         #print("sum of sigma=",np.sum(sdp1.Sigma))
-        density[i]=np.sum(sdp1.Sigma)*10e10
-        area[i] = np.pi * 0.95 * sdp1.cyl_r_mag.max()**2 # using max radius at each snapshot to get area to convert SFD to SFR
+        density[i]=np.mean(sdp1.Sigma)*10e10
+        area[i] = np.pi * (0.95 * sdp1.cyl_r_mag.max())**2 # using max radius at each snapshot to get area to convert SFD to SFR
         #print("density/sigma[-1]=",density[i])
         #
         # print snap_id to see the progress
-        print(snap_id)
+        #print(snap_id)
         i += 1
         snap_id += 1
     return x_axis, density, snap_ids, area
@@ -305,27 +306,40 @@ def Densities(galaxy, start, end, n):
 # plot how the density of M33 changes as time goes on
 x_axis, density, snaps, areas = Densities("M33", 0, 802, 1)
 
-fig, ax = plt.subplots(figsize=(9, 8))
-ax.semilogy(snaps, density)
-ax.set(xlabel="Snap ID", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Density vs Snap Number")
-ax.legend(loc='best'); fig.tight_layout()
+#fig, ax = plt.subplots(figsize=(9, 8))
+#ax.semilogy(snaps, density)
+#ax.set(xlabel="Snap ID", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Density vs Snap Number")
+#ax.legend(loc='best'); fig.tight_layout()
+
+params = {'legend.fontsize': 'x-large',
+          'figure.figsize': (9, 8),
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'x-large',
+         'xtick.labelsize':'x-large',
+         'ytick.labelsize':'x-large'}
+pylab.rcParams.update(params)
 
 
 fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(x_axis, density)
-ax.set(xlabel="Time [Gyr]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", title="M33 Stellar Disk Density vs Time")
-ax.legend(loc='best'); fig.tight_layout()
-fig.savefig('M33 Disk Density vs Time ', dpi = 350)
+ax.set(xlabel="Time [Gyr]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", label = "Stellar Disk Density", title="M33 Stellar Disk Density vs Time")
+
 # calc SFD and plot vs snap number and time (Gyr)
+
+#fig, ax = plt.subplots(figsize=(9, 8))
+ax.semilogy(x_axis, density*0.264)
+ax.set(xlabel="Time [Gyr]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]", label = "Gas Density", title="M33 Stellar Disk Density vs Time")
+ax.legend(loc='best'); fig.tight_layout()
+fig.savefig('M33 Disk Density and Gas Density vs Time ', dpi = 350)
 
 gas_density = density * 0.264 #Msun kpc^-2
 gas_density_pc = gas_density*(u.Msun/u.kpc**2).to(u.Msun/u.pc**2) # convert kpc^2 to pc^2
 
 SFD = 2.5*10**(-4)*(gas_density_pc)**1.4 # M_sun yr^-1 kpc^-2
 
-fig, ax = plt.subplots(figsize=(9, 8))
-ax.semilogy(snaps, SFD)
-ax.set(xlabel="Snap ID", ylabel=r"SFD [$M_\odot$ yr$^{-1}$ kpc${-2}$]", title="M33 Star Formation Density vs Snap Number")
+#fig, ax = plt.subplots(figsize=(9, 8))
+#ax.semilogy(snaps, SFD)
+#ax.set(xlabel="Snap ID", ylabel=r"SFD [$M_\odot$ yr$^{-1}$ kpc${-2}$]", title="M33 Star Formation Density vs Snap Number")
 
 fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(x_axis, SFD)
@@ -333,11 +347,12 @@ ax.set(xlabel="Time [Gyr]", ylabel=r"SFD [$M_\odot$ yr$^{-1}$ kpc${-2}$]", title
 fig.savefig('M33 SFD vs Time ', dpi = 350)
 # calculate SFR by multiplying by the area of M33 at each snapshot
 # plot SFR vs snap number and SFR vs time (Gyr)
+radius = 10 #kpc
 SFR = SFD * areas
-
-fig, ax = plt.subplots(figsize=(9, 8))
-ax.semilogy(snaps, SFR)
-ax.set(xlabel="Snap ID", ylabel=r"SFR [$M_\odot$ / yr$^1$]", title="M33 SFR vs Snap Number")
+#SFR = SFD * np.pi * radius**2
+#fig, ax = plt.subplots(figsize=(9, 8))
+#ax.semilogy(snaps, SFR)
+#ax.set(xlabel="Snap ID", ylabel=r"SFR [$M_\odot$ / yr$^1$]", title="M33 SFR vs Snap Number")
 
 fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(x_axis, SFR)
