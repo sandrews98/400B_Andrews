@@ -73,7 +73,7 @@ def SersicE(R, Re, n, Mtot):
 
 # # Part B
 # 
-# Comput the surface density profile for the simulated bulge
+# Compute the surface density profile for the simulated bulge
 # 
 # a) Create an instance of the MassProfile Class for M31. Store it as a variable `M31`. 
 # 
