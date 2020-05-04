@@ -247,11 +247,11 @@ class SurfaceDensityProfile:
         self.r_annuli = np.sqrt(self.radii[1:] * self.radii[:-1])
         
 # read in three example snapshots
-sdp0 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 801)
+sdp0 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 0)
 #sdp1 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 400)
 #sdp2 = SurfaceDensityProfile("/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/", "M33", 801)
-# plot the surface density profiles of the M33 stellar disk
 
+### Plots ### 
 params = {'legend.fontsize': 'x-large',
           'figure.figsize': (9, 8),
          'axes.labelsize': 'x-large',
@@ -259,32 +259,30 @@ params = {'legend.fontsize': 'x-large',
          'xtick.labelsize':'x-large',
          'ytick.labelsize':'x-large'}
 pylab.rcParams.update(params)
-#### Snapshot 0 ###
-"""
+### Snapshot 0 ###
+# the surface density profile of the M33 stellar disk and the Gass density profile
+
 fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(sdp0.r_annuli, sdp0.Sigma*10e10, label="Stellar Disk Mass at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
-
 ax.semilogy(sdp0.r_annuli, sdp0.Sigma*10e10*0.264, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\Sigma$(disk) [$M_\odot$ / kpc$^2$]")
 ax.tick_params(which='major', labelsize=18, width=2, length=4)
 ax.set_xlim(0,10)
-
 ax.legend(loc='best')
 fig.savefig('M33 Stellar Disk Density and Gas Density at snapshot 0', dpi = 350)
 plt.show()
 
-
-
+# convert the density from kp^2 to pc^2
 densities = sdp0.Sigma*10**10 # in Msun / kpc**2
 density_pc = densities*(u.Msun/u.kpc**2).to(u.Msun/u.pc**2) # convert kpc**2 to pc**2
 
-
+# calculate the star formation density using the Kennicutt Schmidt relation
 SFD = 2.5*10**(-4)*(density_pc*0.264)**1.4 # M_sun yr^-1 kpc^-2
-SFD1 = SFD*(u.Msun/(u.yr*u.pc**2)).to(u.Msun/(u.yr*u.kpc**2))
 
+# calculate the star formation rate by multiplying the SFD by the area of M33
 SFR = SFD * np.pi*sdp0.r_annuli**2
 
-
+# plot the SFD as a function of radius
 fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(sdp0.r_annuli, SFD, label="Gass SFD at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"SFD [$M_\odot$ $yr^{-1}$ kpc$^{-2}$]]")
@@ -293,7 +291,7 @@ ax.set_xlim(0,10)
 fig.savefig('M33 SFD vs Radius ', dpi = 350)
 plt.show()
 
-
+# plot the SFR as a function of radius
 fig, ax = plt.subplots(figsize=(9, 8))
 ax.semilogy(sdp0.r_annuli, SFR, label="Gass Mass at $t={:.1f}$ Gyr".format(sdp0.com.time.value/1e3), lw=2, alpha=0.75)
 ax.set(xlabel=r"$r$ [kpc]", ylabel=r"SFR [$M_\odot$ $yr^{-1}$]")
@@ -310,50 +308,11 @@ plt.show()
 ################################
 
 # we can simply plot all particles in a projected view
+# plot how M33 looks at snapshot 0 and snapshot 801
 fig, ax = plt.subplots(figsize=(8, 8))
 ax.scatter(sdp0.alg_r[:, 0], sdp0.alg_r[:, 1], ec="None", fc='b', s=0.25)
 ax.set(xlabel=r"$x$ [kpc]", ylabel=r"$y$ [kpc]", aspect=1.0)
 fig.tight_layout()
 fig.savefig('M33 x vs y snap=801', dpi=350)
 
-"""
-
-fig, ax = plt.subplots(figsize=(8, 8))
-ax.scatter(sdp1.cyl_r_mag, sdp1.cyl_theta, ec="None", fc='b', s=0.25)
-ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\theta$ [rad]",
-       title="M33 Stellar Disk ($t={:.1f}$ Gyr)".format(sdp1.com.time.value/1e3))
-fig.tight_layout()
-
-
-#To make the spirals stand out more, we can scale the content (point size in 
-#   scatter plots, or color in colormaps) with a function of radius. Here, we 
-#   scale the point size with  ln(2) .
-#Combined with the picture below, you may select a desired model to fit the 
-#   spirals (by overplotting on the figure or performing more calculations) to 
-#   obtain, for example, the pitch angle
-
-fig, ax = plt.subplots(figsize=(8, 8))
-ax.scatter(sdp1.cyl_r_mag, sdp1.cyl_theta, ec="None", fc='b', s=0.25*np.log(sdp1.cyl_r_mag**2))
-ax.set(xlabel=r"$r$ [kpc]", ylabel=r"$\theta$ [rad]", 
-       title="M33 Stellar Disk ($t={:.1f}$ Gyr)".format(sdp1.com.time.value/1e3))
-ax.text(30, 1.5, 'point size scaled with $\ln(r^2)$', fontsize=16)
-fig.tight_layout()
-
-############################
-### 3D Interactive Plot ####
-############################
-
-layout = plygo.Layout(width=1024, height=800, autosize=False, showlegend=True, scene=dict(aspectmode='data', 
-                      xaxis_title='x/kpc', yaxis_title='y/kpc', zaxis_title='z/kpc',                                                                    
-                      camera=dict(up=dict(x=0,y=0,z=1), center=dict(x=0,y=0,z=0), eye=dict(x=-0.75,y=-1.25,z=1.5))))
-data = [plygo.Scatter3d(x=sdp1.alg_r[::5, 0], y=sdp1.alg_r[::5, 1], z=sdp1.alg_r[::5, 2], mode='markers',
-                        marker=dict(size=1, opacity=0.8, color='blue'), name=r"Sample N_par="+str(sdp1.alg_r[::5].shape[0]))]
-fig = plygo.Figure(data=data, layout=layout)
-
-# make it a tight layout
-fig.update_layout(margin=dict(l=0, r=0, b=0, t=0), legend=dict(x=0.05, y=0.95, bordercolor="Black", borderwidth=2))
-fig.show(renderer='notebook')
-
-# if you want to save the interactive visualization into a HTML file and share with ohters, uncomment the following line
-#fig.write_html("portable_visualization.html")
 """
