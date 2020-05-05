@@ -1,0 +1,304 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Apr 29 17:07:11 2020
+
+@author: samantha
+"""
+"""
+this is part three of my project. It is HW 6, which has been modified to give the time of the close encounters
+and how close they are
+"""
+# Homework 6
+ 
+
+# import modules
+import numpy as np
+
+# import plotting modules
+import matplotlib.pyplot as plt
+import matplotlib
+
+# my modules
+
+# Step 1: modify CenterOfMass so that COM_P now takes a parameter specifying 
+# by how much to decrease RMAX instead of a factor of 2
+from CenterOfMass2 import CenterOfMass
+
+
+
+def OrbitCOM(galaxy,start,end,n):
+    # This function will compute the time and COM position and velocity vectors of a given galaxy
+    # in each snapshot and save the output file.  We do not want to run this code repeatedly.
+    # Inputs:
+    #      galaxy:  the name of the galaxy, e.g. "MW" "M31" "M33"
+    #      start:   the number of the first snapshot to read in
+    #      end:     the number of the last snapshot to read in
+    #      n:       an integer indicating the intervasl over which you will return the COM
+    #
+    # returns:
+    #      nothing
+    #      writes an output file with time, COM position and Velocity vectors for a galaxy
+    #
+    """function that loops over all the desired snapshots to compute the COM pos and vel as a function of time.
+          
+    returns: 
+    """
+    print("OrbitCom")
+    # compose the filename for output
+
+    directory1="/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/HW6_Results/"
+    # create filenames
+    fileout=directory1+'Orbit_'+galaxy+'.txt'   
+    print("file out = ",fileout)
+    #  set tolerance and VolDec for calculating COM_P in CenterOfMass
+    delta=0.1
+    VolDec=10
+    # for M33 that is stripped more, use different values for VolDec
+    if galaxy == "M33":
+        delta=0.1
+        VolDec=4
+     
+    # generate the snapshot id sequence 
+    # it is always a good idea to also check if the input is eligible (not required)
+    snap_ids=np.arange(start,end,n)
+    if len(snap_ids)==0:
+        print("Invalid Snap ID start and end")
+        return
+    
+    
+    # initialize the array for orbital info: t, x, y, z, vx, vy, vz of COM
+    orbit=np.zeros((len(snap_ids),7))
+    
+    
+    # a for loop to read each snap, get a COM position and velocity
+
+    i=0
+    snap_id=0
+    for i, snap_id in enumerate(snap_ids): # loop over files
+#        print("i =",i)
+#        print("snap_id =",snap_id)
+        # compose the data filename (be careful about the folder)
+           # add a string of the filenumber to the value "000"
+        directory="/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/"
+        directory=directory+galaxy
+        directory=directory+"\\"
+        ilbl = '000' + str(snap_id)
+#        print("ilbl=",ilbl)
+        # remove all but the last 3 digits
+        ilbl = ilbl[-3:]
+        # create filenames
+        filename=directory+'%s_'%(galaxy) + ilbl + '.txt'     
+        
+        # Initialize an instance of CenterOfMass class, using disk particles
+        COM = CenterOfMass(filename,2)
+        
+        # Store the COM pos and vel. Remember that now COM_P required VolDec
+        GalCOMP = COM.COM_P(delta,VolDec) #COM pos
+        GalCOMV = COM.COM_V(GalCOMP[0].value,GalCOMP[1].value,GalCOMP[2].value) #COM vel
+#        print("GalCOMP = ",GalCOMP,"GalCOMV = ",GalCOMV)
+        
+        # store the time, pos, vel in ith element of the orbit array,  without units (.value) 
+        # note that you can store 
+        # a[i] = var1, *tuple(array1)
+        orbit[i]=COM.time.value/1000,GalCOMP[0].value,GalCOMP[1].value,GalCOMP[2].value,GalCOMV[0].value,GalCOMV[1].value,GalCOMV[2].value
+#        print("orbit[i] = ",orbit[i])
+        # print snap_id to see the progress
+        print(snap_id)
+        i+=1
+        snap_id+=1
+        
+    # write the data to a file
+    # we do this because we don't want to have to repeat this process 
+    # this code should only have to be called once per galaxy.
+    np.savetxt(fileout, orbit, fmt = "%11.3f"*7, comments='#',
+               header="{:>10s}{:>11s}{:>11s}{:>11s}{:>11s}{:>11s}{:>11s}"\
+                      .format('t', 'x', 'y', 'z', 'vx', 'vy', 'vz'))
+
+def ReadOrbits(galaxy):
+    # This function reads in the orbit data for a given galaxy and returns the data in a labeled array
+    # Input:
+    #   galaxy: the name of the galaxy orbit file to read in "MW", "M31", "M33"
+    # Output:
+    #   data: an array with lables using the header in line 1
+    print("ReadOrbits")
+    directory="/Users/samantha/Documents/400b/400B_Andrews/Homeworks/Homework6/HW6_Results/" 
+    # create filenames
+    filename=directory+'Orbit_'+galaxy+'.txt'       
+    print("filename = ",filename)
+    # Initialize Values
+    data=[]
+
+    # Open the file  - I am not sure you need this genfromtxt may be all you need
+#    file=open(filename,'r')
+
+    #Store the remainder of the file using the NumPy function np.genfromtxt.
+    #This allows you to use the column header information (1st line of the file,starting with #)
+    #Parameters dtype=None means line is split using white space
+    #names=True creates arrays to store the data with the right labels using the headers in line 1
+    #the labels are t,x,y,x,vx,vy,vz
+    data=np.genfromtxt(filename,dtype=None,names=True)
+#    print(data)
+#    print(data['x'][0])
+    #Close the file - I am not sure you need this genfromtxt may be all you need
+#    file.close
+    #Return the data read in
+    return data
+
+def comp_mag(x,y,z):
+        #fucntion to compute magnitude given the coordinates (x,y,z) in kpc
+        #   from the center of the mass position
+        # NONE OF THESE VALUES ARE GLOBAL FOR THE CLASS SO I AM NOT USING SELF IN FRONT OF THEM   
+        #initialize
+#        print("comp_mag")
+        #Compute mag
+#        print("x,y,z = ",x,y,z)
+        mag=np.sqrt(x**2+y**2+z**2)
+        #Returen the mag
+        return mag
+
+def MagDiff(vector1,vector2):
+    # function to compute difference between two vectors and computes the magnitude of that vector
+    # You can use this function to return both the relative position and relative velocity for two 
+    # galaxies over the entire orbit
+    # Inputs:
+    #   vector1 - x,y,z values
+    #   vector2 - x,y,z values
+    # Outputs:
+    #   magnitude of difference of the two vectors (vector2 - vector1)
+#    print("MagDiff")
+#    print("vector2[0]=",vector2[0])
+#    print("vector1[0]=",vector1[0])
+         
+    return comp_mag(vector2[0]-vector1[0],vector2[1]-vector1[1],vector2[2]-vector1[2])
+
+def find_collisions(x,y):
+    # function to calculate the time of close encounters between M31 and M33
+    # Inputs:
+    #   x and y positions in kpc
+    # Outputs:
+    #   minimum values for x and y between a range of time
+    print("find_collisions")
+    print("len of x=",len(x))
+    print("len of y=",len(y))
+    minx=[]
+    miny=[]
+    i=2
+    while i < len(x):
+        print("i=",i)
+        if np.sign(x[i-2]-x[i-1])==1 and np.sign(x[i-1]-x[i]) != 1: #finds when plot changes direction
+            minx=np.append(minx,x[i-1])
+            miny=np.append(miny,y[i-1])
+        i+=1
+    return minx,miny
+
+# Recover the orbits and generate the COM files for each galaxy
+# read in 800 snapshots in intervals of n=5
+# Note: This might take a little while - test your code with a smaller number of snapshots first! 
+"""
+OrbitCOM("MW",0,800,5)
+OrbitCOM("M31",0,800,5)
+OrbitCOM("M33",0,800,5)
+"""    
+# Read in the data files for the orbits of each galaxy that you just created
+# headers:  t, x, y, z, vx, vy, vz
+
+#MW_Orbits=ReadOrbits("MW")
+M31_Orbits=ReadOrbits("M31")
+M33_Orbits=ReadOrbits("M33")
+
+
+#print("MW_M31_MagDiff_Velocities =",MW_M31_MagDiff_Velocities)   
+# of M33 and M31
+M33_M31_MagDiff_Positions=[]
+M33_M31_MagDiff_Velocities=[]
+
+# Positions
+M33_M31_MagDiff_Positions=MagDiff((M33_Orbits['x'],M33_Orbits['y'],M33_Orbits['z']),
+                                  (M31_Orbits['x'],M31_Orbits['y'],M31_Orbits['z']))
+M33_M31_MagDiff_Velocities=MagDiff((M33_Orbits['vx'],M33_Orbits['vy'],M33_Orbits['vz']),
+                                  (M31_Orbits['vx'],M31_Orbits['vy'],M31_Orbits['vz']))
+
+
+
+# Plot the Orbit of the galaxies 
+#################################
+#Plot M33_M31_MagDiff_Positions
+
+
+fig = plt.figure(figsize=(10,10))
+ax = plt.subplot(111)
+
+# Plot the magnitude differences as a function of time column 0 of the array contains the times
+# Which time do you use?  The MW or M31 times?
+
+plt.plot(M33_Orbits['t'],M33_M31_MagDiff_Positions, color='blue',linewidth=5, label='M33_M31')
+
+
+# Add axis labels
+plt.xlabel('Time (Gyr)', fontsize=22)
+plt.ylabel('Separation (kpc)', fontsize=22)
+
+#set axis limits ----------------I DONT KNOW WHAT IS APPROPRIATE HERE
+#plt.ylim(1e9,1e12) 
+
+#adjust tick label font size
+label_size = 22
+matplotlib.rcParams['xtick.labelsize'] = label_size 
+matplotlib.rcParams['ytick.labelsize'] = label_size
+
+# add a legend with some customizations.
+legend = ax.legend(loc='lower right',fontsize='x-large')
+
+#add figure text
+plt.figtext(0.15, 0.83, 'M33 vs M31 Relative Positions', fontsize=22)
+
+#plt.show()
+# Save to a file
+ax.set_rasterized(True)
+directory="D:\\Nicole's Data Files\\python_work\\text_files\\Sam's files\\" 
+plotfilename=directory+"M33_vs_M31_Position_Orbits.pdf"
+plt.savefig(plotfilename, rasterized='True', dpi=350)
+
+#Plot M33_M31_MagDiff_Positions Log Plot
+
+
+fig = plt.figure(figsize=(10,10))
+ax = plt.subplot(111)
+
+# Plot the magnitude differences as a function of time column 0 of the array contains the times
+# Which time do you use?  The MW or M31 times?
+
+plt.semilogy(M33_Orbits['t'],M33_M31_MagDiff_Positions, color='blue',linewidth=5, label='M33_M31')
+
+
+# Add axis labels
+plt.xlabel('Time (Gyr)', fontsize=22)
+plt.ylabel('Log (Separation (kpc))', fontsize=22)
+
+#set axis limits ----------------I DONT KNOW WHAT IS APPROPRIATE HERE
+#plt.ylim(1e9,1e12) 
+
+#adjust tick label font size
+label_size = 22
+matplotlib.rcParams['xtick.labelsize'] = label_size 
+matplotlib.rcParams['ytick.labelsize'] = label_size
+
+# add a legend with some customizations.
+legend = ax.legend(loc='lower right',fontsize='x-large')
+
+#add figure text
+plt.figtext(0.15, 0.83, 'Log Y Plot - M33 vs M31 Relative Positions', fontsize=22)
+
+#plt.show()
+# Save to a file
+ax.set_rasterized(True)
+directory="D:\\Nicole's Data Files\\python_work\\text_files\\Sam's files\\" 
+plotfilename=directory+"M33_vs_M31_Position_Orbits_log.pdf"
+plt.savefig(plotfilename, rasterized='True', dpi=350)
+m33vsm31_collision_positions=[]
+m33vsm31_collision_times=[]
+m33vsm31_collision_positions,m33vsm31_collision_times=find_collisions(M33_M31_MagDiff_Positions,M33_Orbits['t'])
+print("M33 vs M31 Collisons (times) = ",m33vsm31_collision_times)
+print("M33 vs M31 Collisons (separation (kpc)) = ",m33vsm31_collision_positions)
+
